@@ -528,9 +528,11 @@ hint:SetSpacing(2)
 local HINT = "One step per line: an emote (/bow), text for /e (looks around.), or wait 3. "
     .. "%t is your target's name. Text lines go out as soon as you press; emotes keep their timing."
 
-local function ShowHint(err)
-    hint:SetText(err or HINT)
-    if err then hint:SetTextColor(1, 0.35, 0.35) else hint:SetTextColor(0.5, 0.5, 0.5) end
+local GREY, RED, AMBER = { 0.5, 0.5, 0.5 }, { 1, 0.35, 0.35 }, { 1, 0.7, 0.25 }
+
+local function ShowHint(msg, color)
+    hint:SetText(msg or HINT)
+    hint:SetTextColor(unpack(color or GREY))
 end
 
 local function Lines()
@@ -542,6 +544,16 @@ local function Lines()
     return out
 end
 
+-- Warns while you type when a text line sits after a wait or a timed emote.
+local function UpdateHint()
+    local early = ns.EarlyText(Lines())
+    if not early then return ShowHint() end
+    if #early > 28 then early = early:sub(1, 26):gsub("[\192-\255][\128-\191]*$", "") .. "..." end
+    ShowHint(format("Text can't wait: \"%s\" goes out on the press, with the first step. "
+        .. "Move it up to match.", early), AMBER)
+end
+stepsBox:SetScript("OnTextChanged", UpdateHint)
+
 local save = TextButton(editor, "Save", 60)
 save:SetPoint("BOTTOMRIGHT")
 local cancel = TextButton(editor, "Cancel", 60)
@@ -551,11 +563,11 @@ delete:SetPoint("BOTTOMLEFT")
 
 save:SetScript("OnClick", function()
     local name, lines = strtrim(nameBox:GetText()), Lines()
-    if name == "" then return ShowHint("Give it a name.") end
-    if #lines == 0 then return ShowHint("Add at least one line.") end
+    if name == "" then return ShowHint("Give it a name.", RED) end
+    if #lines == 0 then return ShowHint("Add at least one line.", RED) end
     for _, line in ipairs(lines) do
         local step = ns.ParseLine(line)
-        if step and step.bad then return ShowHint(step.bad .. " isn't an emote. Use /e for text.") end
+        if step and step.bad then return ShowHint(step.bad .. " isn't an emote. Use /e for text.", RED) end
     end
     ns.SaveCustom(editingId, name, lines)
     EzEmoteDB.tab = "custom"
@@ -591,7 +603,7 @@ function OpenEditor(id)
     delete.armed = nil
     delete.text:SetText("Delete")
     delete.text:SetTextColor(1, 1, 1)
-    ShowHint()
+    UpdateHint()
     SetMode("editor")
     nameBox:SetFocus()
 end

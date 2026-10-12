@@ -178,6 +178,24 @@ function ns.ParseLine(line)
     return { bad = line }
 end
 
+-- First text line written after a wait or a timed emote. Text can't be delayed (see RunCustom),
+-- so such a line goes out on the press, earlier than written. nil when the order is honest.
+function ns.EarlyText(lines)
+    local actions, delayed = 0, false
+    for _, line in ipairs(lines) do
+        local step = ns.ParseLine(line)
+        if step and step.wait then
+            delayed = true
+        elseif step and step.text then
+            if delayed then return step.text end
+            actions = actions + 1
+        elseif step then
+            if actions > 0 then delayed = true end
+            actions = actions + 1
+        end
+    end
+end
+
 -- The running chain: { steps, timer } with the steps still to come on their timing.
 local chain
 

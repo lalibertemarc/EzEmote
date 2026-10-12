@@ -1,5 +1,9 @@
 # EzEmote
 
+## v1.0.1
+
+- **No more surprise lines.** Text in a chain always goes out the moment you press, so a line written after a `wait` jumped ahead of the emotes before it without telling you. The editor now warns you while you type, in amber: *Text can't wait: "Realises she needs more..." goes out on the press, with the first step. Move it up to match.*
+
 ## v1.0.0
 
 - **Your action bars back.** Every emote in the game sits in one small palette instead of a row of macros. Open it with a key binding or the tiny launcher icon, type a few letters and press Enter, or pick from Favorites, Recent, Greet, Mood, Social, Poses, Silly, Combat or All. It closes as soon as you emote; Shift-click to keep it open.
