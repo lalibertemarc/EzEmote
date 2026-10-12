@@ -178,13 +178,12 @@ function ns.ParseLine(line)
     return { bad = line }
 end
 
-local chainTimer
+-- The running chain: { steps, timer } with the steps still to come on their timing.
+local chain
 
 function ns.StopChain()
-    if chainTimer then
-        chainTimer:Cancel()
-        chainTimer = nil
-    end
+    if chain and chain.timer then chain.timer:Cancel() end
+    chain = nil
 end
 
 local function Perform(step)
@@ -210,22 +209,53 @@ end
 
 local RunStep
 
-local function Schedule(steps, i, delay)
-    chainTimer = nil
-    if not steps[i] then return end
+local function Schedule(i, delay)
+    if not chain.steps[i] then
+        chain = nil
+        return
+    end
     if delay and delay > 0 then
-        chainTimer = C_Timer.NewTimer(delay, function() RunStep(steps, i) end)
+        local c = chain
+        c.timer = C_Timer.NewTimer(delay, function()
+            if chain == c then RunStep(i) end
+        end)
     else
-        RunStep(steps, i)
+        RunStep(i)
     end
 end
 
-function RunStep(steps, i)
-    chainTimer = nil
-    if ChatLocked() then return Print("The game blocks emotes right now. Chain stopped.") end
-    Perform(steps[i])
-    local j, wait = NextAction(steps, i + 1)
-    Schedule(steps, j, wait or EzEmoteDB.stepDelay)
+function RunStep(i)
+    chain.timer = nil
+    if ChatLocked() then
+        Print("The game blocks emotes right now. Chain stopped.")
+        return ns.StopChain()
+    end
+    Perform(chain.steps[i])
+    local j, wait = NextAction(chain.steps, i + 1)
+    Schedule(j, wait or EzEmoteDB.stepDelay)
+end
+
+-- The game only lets addons send chat text from a click or key press, never from a timer, so
+-- the first step and every text line go out now; the remaining emotes keep their timing.
+local function RunCustom(item)
+    ns.StopChain()
+    local steps = {}
+    for _, line in ipairs(item.lines) do
+        steps[#steps + 1] = ns.ParseLine(line)
+    end
+    local first, lead = NextAction(steps, 1)
+    local started = not lead and steps[first] ~= nil
+    local timed = {}
+    for i, step in ipairs(steps) do
+        if step.text or (started and i == first) then
+            Perform(step)
+        else
+            timed[#timed + 1] = step
+        end
+    end
+    chain = { steps = timed }
+    local i, wait = NextAction(timed, 1)
+    Schedule(i, started and (wait or EzEmoteDB.stepDelay) or wait)
 end
 
 ---------------------------------------------------------------------------
@@ -238,18 +268,12 @@ function ns.Fire(key)
         -- With no target name the game aims the emote at your target, as /wave does.
         PerformEmote(item.token)
     elseif kind == "c" then
-        ns.StopChain()
-        local steps = {}
-        for _, line in ipairs(item.lines) do
-            steps[#steps + 1] = ns.ParseLine(line)
-        end
-        local i, wait = NextAction(steps, 1)
-        Schedule(steps, i, wait)
+        RunCustom(item)
     else
         return
     end
     PushRecent(key)
-    if ns.OnFired then ns.OnFired() end
+    if ns.OnChanged then ns.OnChanged() end
 end
 
 ---------------------------------------------------------------------------

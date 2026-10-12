@@ -404,7 +404,7 @@ function Refresh()
         if c:IsMouseOver() and c:IsShown() then ShowCellTooltip(c) end
     end
 end
-ns.OnFired = Refresh
+ns.OnChanged = Refresh
 
 grid:SetScript("OnMouseWheel", function(_, delta)
     offset = math.max(0, math.min(MaxOffset(), offset - delta * 2))
@@ -526,7 +526,7 @@ hint:SetJustifyH("LEFT")
 hint:SetSpacing(2)
 
 local HINT = "One step per line: an emote (/bow), text for /e (looks around.), or wait 3. "
-    .. "%t is your target's name."
+    .. "%t is your target's name. Text lines go out as soon as you press; emotes keep their timing."
 
 local function ShowHint(err)
     hint:SetText(err or HINT)

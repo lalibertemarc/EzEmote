@@ -33,6 +33,7 @@ wait 3
 - Any other line is sent as `/e` text (`/e text` and `/me text` work too). `%t` becomes your target's name.
 - `wait 3` pauses 3 seconds; otherwise steps are 2 seconds apart (change it in options).
 - One line is a plain custom emote; several make a chain. Ctrl-click a custom item to edit it.
+- One press plays the whole chain. The game only lets addons send chat text from a click or key press, never on a delay, so every text line goes out the moment you press; the emotes after the first keep their timing. `arrive` above waves and looks around the room right away, then sits 2 seconds later.
 
 ## Slash commands
 
