@@ -1,0 +1,47 @@
+# EzEmote
+
+Every emote, your own `/e` lines and emote chains, without a single emote macro on your action bars. Built for roleplayers on WoW Forever.
+
+## Palette
+
+Open it with its key binding, the launcher icon or `/eze`.
+
+- **Type to search**, then press Enter to do the top match. Esc clears the search, then closes the palette.
+- **Tabs:** Favorites, Recent, Greet, Mood, Social, Poses, Silly, Combat, All, Custom.
+- **Click** an emote to do it (aimed at your target, like typing `/wave`). The palette closes; **Shift-click** keeps it open.
+- **Right-click** adds or removes a favorite (gold name). **Alt-click** in Favorites moves one earlier.
+- **Markers:** green = animation, blue = voice line, purple = chain.
+- The gear (or right-clicking the icon) opens options: show/hide the icon, keep the palette open, type-to-search, chain step delay.
+- Drag the palette or the icon by any empty spot to move them.
+
+## Wheel
+
+Bind **Emote wheel** under Options > Keybindings > EzEmote. Hold the key, point at a favorite and release. Your first eight favorites fill it, clockwise from the top.
+
+## Custom emotes and chains
+
+In the Custom tab, **+ New** opens the editor. One step per line:
+
+```
+/wave
+looks around the room.
+wait 3
+/sit
+```
+
+- `/emote` lines do that emote; add a name to aim it at someone: `/bow Alice`.
+- Any other line is sent as `/e` text (`/e text` and `/me text` work too). `%t` becomes your target's name.
+- `wait 3` pauses 3 seconds; otherwise steps are 2 seconds apart (change it in options).
+- One line is a plain custom emote; several make a chain. Ctrl-click a custom item to edit it.
+
+## Slash commands
+
+| Command | Does |
+|---|---|
+| `/eze` | Open or close the palette |
+| `/eze <name>` | Do an emote (`/eze wave`) or a custom item (`/eze arrive`), handy in macros |
+| `/eze icon` | Show or hide the launcher icon |
+| `/eze stop` | Stop a running chain |
+| `/eze reset` | Reset the icon and palette positions |
+
+Categories, starting favorites and the sample custom items live in `Data.lua`.

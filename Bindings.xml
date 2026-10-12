@@ -1,0 +1,4 @@
+<Bindings>
+	<Binding name="EZEMOTE_PALETTE" category="EzEmote">EzEmote_TogglePalette()</Binding>
+	<Binding name="EZEMOTE_WHEEL" runOnUp="true" category="EzEmote">EzEmote_Wheel(keystate)</Binding>
+</Bindings>

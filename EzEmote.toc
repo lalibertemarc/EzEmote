@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: EzEmote
+## Notes: Every emote, your own /e lines and emote chains in a compact palette and a hold-key wheel. No more emote macros on your bars.
+## Author: Marc
+## Version: @project-version@
+## IconTexture: Interface\Icons\Spell_Shadow_SoothingKiss
+## SavedVariables: EzEmoteDB
+
+Data.lua
+Core.lua
+UI.lua
+Wheel.lua
