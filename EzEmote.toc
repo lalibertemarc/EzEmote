@@ -5,6 +5,7 @@
 ## Version: @project-version@
 ## IconTexture: Interface\Icons\Spell_Shadow_SoothingKiss
 ## SavedVariables: EzEmoteDB
+## X-Curse-Project-ID: 1741155
 
 Data.lua
 Core.lua
