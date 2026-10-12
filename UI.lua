@@ -43,6 +43,36 @@ local function TextButton(parent, label, width)
 end
 
 -- Text box with grey placeholder text that shows while it's empty; inset leaves room for an icon.
+-- Tab with a label, and a gold bar when selected (category rail, wheel tabs).
+local function ListButton(parent, width)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(width, ROW_H)
+    Hover(b, 0.05)
+    b.text = Text(b)
+    b.text:SetPoint("LEFT", 8, 0)
+    b.text:SetPoint("RIGHT", -4, 0)
+    b.text:SetJustifyH("LEFT")
+    b.text:SetWordWrap(false)
+    b.bar = b:CreateTexture(nil, "ARTWORK")
+    b.bar:SetColorTexture(unpack(ns.COLORS.fav))
+    b.bar:SetSize(2, 12)
+    b.bar:SetPoint("LEFT")
+    return b
+end
+
+local function SetSelected(b, on)
+    b.bar:SetShown(on)
+    if on then b.text:SetTextColor(1, 1, 1) else b.text:SetTextColor(0.55, 0.55, 0.55) end
+end
+
+-- Small "-" or "+" button right of anchor.
+local function Stepper(parent, label, anchor, x, onClick)
+    local b = TextButton(parent, label, 20)
+    b:SetPoint("LEFT", anchor, "RIGHT", x, 0)
+    b:SetScript("OnClick", onClick)
+    return b
+end
+
 local function SingleLineBox(parent, placeholder, inset)
     local e = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
     e:SetHeight(SEARCH_H)
@@ -93,9 +123,21 @@ Movable(palette, "palettePos")
 palette:Hide()
 tinsert(UISpecialFrames, "EzEmotePalette") -- Esc closes it
 
-local mode = "grid" -- "grid" | "options" | "editor"
+local mode = "grid" -- "grid" | "options" | "editor" | "wheels"
 local keys, offset = {}, 0 -- keys in the current grid view; first visible row
+local editWheel = 1 -- wheel shown in the wheel editor
+local pickSlot -- slot of that wheel waiting for an emote picked from the grid
 local Refresh, SetMode, OpenEditor -- defined below
+
+-- Does key, or puts it on the slot being picked. The palette closes after an emote unless kept open.
+local function Choose(key, keepOpen)
+    if pickSlot then
+        EzEmoteDB.wheels[editWheel].slots[pickSlot] = key
+        return SetMode("wheels")
+    end
+    ns.Fire(key)
+    if not (EzEmoteDB.keepOpen or keepOpen) then palette:Hide() end
+end
 
 ---------------------------------------------------------------------------
 -- Search
@@ -135,16 +177,26 @@ end
 
 local firstKey -- key of the top result, fired by Enter
 
-search:HookScript("OnTextChanged", function()
-    if mode ~= "grid" then SetMode("grid") else Refresh() end
+-- Typing a search jumps back to the grid. Only real typing: the box also reports a change when
+-- it's first shown, which would throw /eze wheels straight out of the wheel editor.
+search:HookScript("OnTextChanged", function(_, userInput)
+    if mode == "grid" then
+        Refresh()
+    elseif userInput then
+        SetMode("grid")
+    end
 end)
 search:SetScript("OnEnterPressed", function()
-    if not firstKey then return end
-    ns.Fire(firstKey)
-    if not EzEmoteDB.keepOpen then palette:Hide() end
+    if firstKey then Choose(firstKey) end
 end)
 search:SetScript("OnEscapePressed", function(self)
-    if self:GetText() ~= "" then self:SetText("") else palette:Hide() end
+    if self:GetText() ~= "" then
+        self:SetText("")
+    elseif pickSlot then
+        SetMode("wheels")
+    else
+        palette:Hide()
+    end
 end)
 -- The palette key closes it again even while you're typing in the search box.
 search:SetScript("OnKeyDown", function(_, key)
@@ -166,17 +218,9 @@ divider:SetPoint("BOTTOMRIGHT", GAP / 2, 0)
 
 local tabs = {}
 for i, cat in ipairs(ns.CATEGORIES) do
-    local b = CreateFrame("Button", nil, rail)
-    b:SetSize(RAIL_W, ROW_H)
+    local b = ListButton(rail, RAIL_W)
     b:SetPoint("TOPLEFT", 0, -(i - 1) * ROW_H)
-    Hover(b, 0.05)
-    b.text = Text(b)
-    b.text:SetPoint("LEFT", 8, 0)
     b.text:SetText(cat.label)
-    b.bar = b:CreateTexture(nil, "ARTWORK")
-    b.bar:SetColorTexture(unpack(ns.COLORS.fav))
-    b.bar:SetSize(2, 12)
-    b.bar:SetPoint("LEFT")
     b:SetScript("OnClick", function()
         EzEmoteDB.tab = cat.key
         offset = 0
@@ -233,9 +277,15 @@ local function ShowCellTooltip(cell)
             GameTooltip:AddLine(line, 0.8, 0.8, 0.8)
         end
     end
-    local fav = ns.FavIndex(key)
-    if fav and fav <= ns.WHEEL_SLOTS then GameTooltip:AddLine("Wheel slot " .. fav, unpack(ns.COLORS.fav)) end
+    local spots = ns.WheelSpots(key)
+    if spots then GameTooltip:AddLine("On wheel: " .. spots, unpack(ns.COLORS.fav)) end
     GameTooltip:AddLine(" ")
+    if pickSlot then
+        GameTooltip:AddLine(format("Click: put it on %s, slot %d", EzEmoteDB.wheels[editWheel].name, pickSlot),
+            unpack(ns.COLORS.fav))
+        return GameTooltip:Show()
+    end
+    local fav = ns.FavIndex(key)
     GameTooltip:AddLine("Click: emote   Shift-click: keep open", 0.6, 0.6, 0.6)
     GameTooltip:AddLine(fav and "Right-click: remove from favorites" or "Right-click: add to favorites", 0.6, 0.6, 0.6)
     if kind == "c" then GameTooltip:AddLine("Ctrl-click: edit", 0.6, 0.6, 0.6) end
@@ -248,6 +298,7 @@ end
 local function OnCellClick(cell, button)
     local key = cell.key
     if key == "new" then return OpenEditor() end
+    if pickSlot and button == "LeftButton" then return Choose(key) end
     if button == "RightButton" then
         ns.ToggleFav(key)
     elseif IsControlKeyDown() and key:sub(1, 1) == "c" then
@@ -255,8 +306,7 @@ local function OnCellClick(cell, button)
     elseif IsAltKeyDown() and EzEmoteDB.tab == "fav" and Query() == "" then
         ns.MoveFavUp(key)
     else
-        ns.Fire(key)
-        if not (EzEmoteDB.keepOpen or IsShiftKeyDown()) then return palette:Hide() end
+        return Choose(key, IsShiftKeyDown())
     end
     Refresh()
 end
@@ -319,7 +369,7 @@ local function SearchKeys(q)
 end
 
 local EMPTY = {
-    fav = "Right-click any emote to add it to your favorites. The first eight fill the wheel.",
+    fav = "Right-click any emote to add it to your favorites.",
     recent = "Emotes you use show up here.",
     search = "No emote matches.",
 }
@@ -387,11 +437,7 @@ function Refresh()
     empty:SetShown(#keys == 0)
 
     local searching = Query() ~= ""
-    for key, b in pairs(tabs) do
-        local on = key == EzEmoteDB.tab and not searching
-        b.bar:SetShown(on)
-        if on then b.text:SetTextColor(1, 1, 1) else b.text:SetTextColor(0.55, 0.55, 0.55) end
-    end
+    for key, b in pairs(tabs) do SetSelected(b, key == EzEmoteDB.tab and not searching) end
 
     local rows = math.ceil(#keys / COLS)
     thumb:SetShown(rows > ROWS)
@@ -461,26 +507,26 @@ local function UpdateDelay()
     delayLabel:SetText(format("Pause between chain steps: %.1f s", EzEmoteDB.stepDelay))
 end
 
-local function Stepper(label, delta, x)
-    local b = TextButton(options, label, 20)
-    b:SetPoint("LEFT", delayLabel, "RIGHT", x, 0)
-    b:SetScript("OnClick", function()
-        EzEmoteDB.stepDelay = math.max(0.5, math.min(10, EzEmoteDB.stepDelay + delta))
-        UpdateDelay()
-    end)
+local function ChangeDelay(delta)
+    EzEmoteDB.stepDelay = math.max(0.5, math.min(10, EzEmoteDB.stepDelay + delta))
+    UpdateDelay()
 end
-Stepper("-", -0.5, 10)
-Stepper("+", 0.5, 34)
+Stepper(options, "-", delayLabel, 10, function() ChangeDelay(-0.5) end)
+Stepper(options, "+", delayLabel, 34, function() ChangeDelay(0.5) end)
 
 local notes = Text(options, "GameFontDisableSmall")
 notes:SetPoint("TOPLEFT", delayLabel, "BOTTOMLEFT", 0, -16)
 notes:SetWidth(GRID_W + RAIL_W - 8)
 notes:SetJustifyH("LEFT")
 notes:SetSpacing(3)
-notes:SetText("Key bindings: Options > Keybindings > EzEmote.\n"
-    .. "The wheel shows your first eight favorites. Alt-click a favorite to move it earlier.\n"
+notes:SetText("Key bindings: Options > Keybindings > EzEmote. Each of your four wheels has its own.\n"
+    .. "Alt-click a favorite to move it earlier.\n"
     .. "Markers: green = animation, blue = voice, purple = chain.\n"
     .. "/eze <name> does an emote or custom item, handy in macros.")
+
+local editWheels = TextButton(options, "Edit wheels", 80)
+editWheels:SetPoint("BOTTOMLEFT")
+editWheels:SetScript("OnClick", function() SetMode("wheels") end)
 
 local back = TextButton(options, "Back", 60)
 back:SetPoint("BOTTOMRIGHT")
@@ -609,24 +655,192 @@ function OpenEditor(id)
 end
 
 ---------------------------------------------------------------------------
+-- Wheel editor: wheel tabs on top, then name, size and key, and the chosen wheel drawn below
+---------------------------------------------------------------------------
+local EDIT_W = GRID_X + GRID_W - PAD
+local TOOLS_Y = -(ROW_H + GAP)
+local MINI_TOP = TOOLS_Y - SEARCH_H - GAP
+local MINI_W, MINI_H, MINI_RY = 60, 18, 62 -- sized so 4 to 12 slots fit the editor
+
+local wheels = CreateFrame("Frame", nil, palette)
+wheels:SetPoint("TOPLEFT", PAD, BODY_TOP)
+wheels:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+wheels:Hide()
+
+local dragFrom -- slot being dragged onto another
+local DrawWheels
+
+local wheelName = SingleLineBox(wheels, "Wheel name")
+wheelName:SetPoint("TOPLEFT", 0, TOOLS_Y)
+wheelName:SetWidth(120)
+wheelName:SetFontObject("GameFontHighlightSmall")
+wheelName:SetMaxLetters(16)
+wheelName:SetScript("OnEnterPressed", wheelName.ClearFocus)
+wheelName:SetScript("OnEscapePressed", function(self)
+    self:SetText(EzEmoteDB.wheels[editWheel].name)
+    self:ClearFocus()
+end)
+wheelName:SetScript("OnEditFocusLost", function(self)
+    local name = strtrim(self:GetText())
+    if name ~= "" then ns.RenameWheel(editWheel, name) end
+    DrawWheels()
+end)
+
+local wheelTabs = {}
+for w = 1, ns.WHEEL_COUNT do
+    local b = ListButton(wheels, EDIT_W / ns.WHEEL_COUNT)
+    b:SetPoint("TOPLEFT", (w - 1) * EDIT_W / ns.WHEEL_COUNT, 0)
+    b:SetScript("OnClick", function()
+        wheelName:ClearFocus() -- saves a name being typed to the wheel it belongs to
+        editWheel = w
+        DrawWheels()
+    end)
+    wheelTabs[w] = b
+end
+
+local function Resize(delta)
+    ns.ResizeWheel(editWheel, delta)
+    DrawWheels()
+end
+local smaller = Stepper(wheels, "-", wheelName, 8, function() Resize(-1) end)
+local sizeText = Text(wheels)
+sizeText:SetPoint("LEFT", smaller, "RIGHT", 6, 0)
+sizeText:SetWidth(46)
+Stepper(wheels, "+", sizeText, 6, function() Resize(1) end)
+
+local keyText = Text(wheels, "GameFontDisableSmall")
+keyText:SetPoint("RIGHT", wheels, "TOPRIGHT", 0, TOOLS_Y - SEARCH_H / 2)
+keyText:SetJustifyH("RIGHT")
+
+local mini = CreateFrame("Frame", nil, wheels)
+mini:SetPoint("TOPLEFT", 0, MINI_TOP)
+mini:SetPoint("BOTTOMRIGHT")
+
+local miniHub = mini:CreateTexture(nil, "ARTWORK")
+miniHub:SetSize(6, 6)
+miniHub:SetPoint("CENTER")
+miniHub:SetColorTexture(1, 1, 1, 0.5)
+
+local function ShowSlotTooltip(s)
+    local key = EzEmoteDB.wheels[editWheel].slots[s.slot]
+    GameTooltip:SetOwner(s, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(key and ns.Label(key) or "Empty slot")
+    GameTooltip:AddLine("Click: pick an emote", 0.6, 0.6, 0.6)
+    if key then GameTooltip:AddLine("Right-click: clear", 0.6, 0.6, 0.6) end
+    GameTooltip:AddLine("Drag onto another slot: swap", 0.6, 0.6, 0.6)
+    GameTooltip:Show()
+end
+
+local miniSlots = {}
+for i = 1, ns.MAX_SLOTS do
+    local s = CreateFrame("Button", nil, mini, "BackdropTemplate")
+    s.slot = i
+    s:SetSize(MINI_W, MINI_H)
+    Skin(s, 0.85)
+    Hover(s)
+    s.text = Text(s)
+    s.text:SetPoint("LEFT", 4, 0)
+    s.text:SetPoint("RIGHT", -4, 0)
+    s.text:SetWordWrap(false)
+    s:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    s:RegisterForDrag("LeftButton")
+    s:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then
+            EzEmoteDB.wheels[editWheel].slots[i] = nil
+            return DrawWheels()
+        end
+        pickSlot = i
+        SetMode("grid")
+    end)
+    s:SetScript("OnDragStart", function()
+        dragFrom = i
+        DrawWheels()
+    end)
+    s:SetScript("OnDragStop", function()
+        for j, target in ipairs(miniSlots) do
+            if j ~= dragFrom and target:IsShown() and target:IsMouseOver() then ns.SwapSlots(editWheel, dragFrom, j) end
+        end
+        dragFrom = nil
+        DrawWheels()
+    end)
+    s:SetScript("OnEnter", ShowSlotTooltip)
+    s:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    miniSlots[i] = s
+end
+
+function DrawWheels()
+    local data = EzEmoteDB.wheels[editWheel]
+    for w, b in ipairs(wheelTabs) do
+        b.text:SetText(EzEmoteDB.wheels[w].name)
+        SetSelected(b, w == editWheel)
+    end
+    if not wheelName:HasFocus() then wheelName:SetText(data.name) end
+    sizeText:SetText(format("%d slots", data.size))
+    local key = GetBindingKey(ns.WheelBinding(editWheel))
+    keyText:SetText(key and "Key: " .. GetBindingText(key) or "No key bound yet.")
+
+    -- Same layout as the real wheel: clockwise from the top, wider for more slots.
+    local pos = ns.WheelLayout(data.size, MINI_W, MINI_H, MINI_RY)
+    local r, g, b = unpack(ns.COLORS.fav)
+    for i, s in ipairs(miniSlots) do
+        s:SetShown(pos[i] ~= nil)
+        if pos[i] then
+            s:ClearAllPoints()
+            s:SetPoint("CENTER", pos[i][1], pos[i][2])
+            local k = data.slots[i]
+            local label = k and ns.Label(k)
+            s.text:SetText(label or "+")
+            if dragFrom == i then
+                s.text:SetTextColor(r, g, b)
+            elseif label then
+                s.text:SetTextColor(0.9, 0.9, 0.9)
+            else
+                s.text:SetTextColor(0.45, 0.45, 0.45)
+            end
+            s:SetBackdropBorderColor(r, g, b, dragFrom == i and 0.9 or 0.15)
+        end
+    end
+end
+
+local wheelsBack = TextButton(wheels, "Back", 60)
+wheelsBack:SetPoint("BOTTOMRIGHT")
+wheelsBack:SetScript("OnClick", function() SetMode("grid") end)
+
+---------------------------------------------------------------------------
 -- Modes, open/close
 ---------------------------------------------------------------------------
 function SetMode(m)
     mode = m
+    if m ~= "grid" then pickSlot = nil end
     rail:SetShown(m == "grid")
     grid:SetShown(m == "grid")
     options:SetShown(m == "options")
     editor:SetShown(m == "editor")
-    gear.tex:SetVertexColor(1, 1, 1)
-    if m == "options" then
+    wheels:SetShown(m == "wheels")
+    if m == "options" or m == "wheels" then
         gear.tex:SetVertexColor(unpack(ns.COLORS.fav))
+    else
+        gear.tex:SetVertexColor(1, 1, 1)
+    end
+    if m == "options" then
         for _, b in ipairs(checks) do b.Update() end
         UpdateDelay()
+    elseif m == "wheels" then
+        DrawWheels()
+    end
+    -- While picking for a wheel slot, the search box says so.
+    if pickSlot then
+        search.placeholder:SetText(format("Pick for %s, slot %d", EzEmoteDB.wheels[editWheel].name, pickSlot))
+        search.placeholder:SetTextColor(unpack(ns.COLORS.fav))
+    else
+        search.placeholder:SetText("Search emotes")
+        search.placeholder:SetTextColor(0.5, 0.5, 0.5)
     end
     if m ~= "editor" then
         nameBox:ClearFocus()
         stepsBox:ClearFocus()
     end
+    if m ~= "wheels" then wheelName:ClearFocus() end
     GameTooltip:Hide()
     Refresh()
 end
@@ -642,10 +856,12 @@ palette:SetScript("OnShow", function()
     end
 end)
 palette:SetScript("OnHide", function()
+    pickSlot = nil
     search:SetText("")
     search:ClearFocus()
     nameBox:ClearFocus()
     stepsBox:ClearFocus()
+    wheelName:ClearFocus()
     GameTooltip:Hide()
 end)
 

@@ -14,9 +14,17 @@ Open it with its key binding, the launcher icon or `/eze`.
 - The gear (or right-clicking the icon) opens options: show/hide the icon, keep the palette open, type-to-search, chain step delay.
 - Drag the palette or the icon by any empty spot to move them.
 
-## Wheel
+## Wheels
 
-Bind **Emote wheel** under Options > Keybindings > EzEmote. Hold the key, point at a favorite and release. Your first eight favorites fill it, clockwise from the top.
+You get four wheels, each with its own key binding under Options > Keybindings > EzEmote (listed by name, e.g. "Emote wheel 2: Mood"). Hold a wheel's key, point at an emote and release.
+
+They start as **Main** (your first eight favorites), **Mood**, **Poses** and **Combat**. Set them up in the wheel editor (`/eze wheels`, or Edit wheels in the options):
+
+- Pick a wheel from the tabs on top, rename it in the box below.
+- **- / +** sets how many slots it has, 4 to 12 (8 to start). A wheel with more slots is wider on screen. Shrinking hides the extra slots but keeps their emotes for when you grow it again.
+- **Click** a slot, then pick any emote or custom item from the palette (search and tabs work as usual; Esc cancels).
+- **Right-click** a slot to clear it, **drag** one slot onto another to swap them. The slot tooltips repeat this.
+- Slots keep their spot, so an emote is always in the same direction. Pointing at an empty slot does nothing.
 
 ## Custom emotes and chains
 
@@ -41,6 +49,7 @@ wait 3
 |---|---|
 | `/eze` | Open or close the palette |
 | `/eze <name>` | Do an emote (`/eze wave`) or a custom item (`/eze arrive`), handy in macros |
+| `/eze wheels` | Set up your four wheels |
 | `/eze icon` | Show or hide the launcher icon |
 | `/eze stop` | Stop a running chain |
 | `/eze reset` | Reset the icon and palette positions |

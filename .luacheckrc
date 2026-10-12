@@ -9,7 +9,7 @@ globals = {
     "SlashCmdList",
     "BINDING_HEADER_EZEMOTE",
     "BINDING_NAME_EZEMOTE_PALETTE",
-    "BINDING_NAME_EZEMOTE_WHEEL",
+    "_G",
     "EzEmote_TogglePalette",
     "EzEmote_Wheel",
 }
@@ -25,5 +25,5 @@ read_globals = {
     "C_ChatInfo", "C_Timer", "issecretvalue",
     -- Global APIs
     "DoEmote", "SendChatMessage", "UnitExists", "UnitName", "UnitFactionGroup", "GetCursorPosition",
-    "GetBindingAction", "IsAltKeyDown", "IsControlKeyDown", "IsShiftKeyDown",
+    "GetBindingAction", "GetBindingKey", "GetBindingText", "IsAltKeyDown", "IsControlKeyDown", "IsShiftKeyDown",
 }

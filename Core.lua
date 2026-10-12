@@ -3,7 +3,20 @@ local _, ns = ...
 
 BINDING_HEADER_EZEMOTE = "EzEmote"
 BINDING_NAME_EZEMOTE_PALETTE = "Open the emote palette"
-BINDING_NAME_EZEMOTE_WHEEL = "Emote wheel (hold, release on an emote)"
+
+-- Binding action of wheel w (Bindings.xml); wheel 1 keeps the name it had before there were several.
+function ns.WheelBinding(w)
+    return w == 1 and "EZEMOTE_WHEEL" or "EZEMOTE_WHEEL" .. w
+end
+
+-- Names the wheel bindings after your wheels, so Options > Keybindings shows "Emote wheel 2: Mood".
+function ns.UpdateBindingNames()
+    for w = 1, ns.WHEEL_COUNT do
+        local wheel = EzEmoteDB and EzEmoteDB.wheels and EzEmoteDB.wheels[w] or ns.DEFAULT_WHEELS[w]
+        _G["BINDING_NAME_" .. ns.WheelBinding(w)] = format("Emote wheel %d: %s", w, wheel.name)
+    end
+end
+ns.UpdateBindingNames()
 
 local function Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cffffb84dEzEmote|r: " .. msg)
@@ -132,7 +145,7 @@ function ns.ToggleFav(key)
     end
 end
 
--- Moves a favorite one place earlier (the first eight fill the wheel, in order).
+-- Moves a favorite one place earlier.
 function ns.MoveFavUp(key)
     local f, i = EzEmoteDB.favorites, ns.FavIndex(key)
     if i and i > 1 then f[i], f[i - 1] = f[i - 1], f[i] end
@@ -158,6 +171,59 @@ local function PushRecent(key)
     Remove(r, key)
     table.insert(r, 1, key)
     for i = #r, ns.MAX_RECENT + 1, -1 do r[i] = nil end
+end
+
+---------------------------------------------------------------------------
+-- Wheels: EzEmoteDB.wheels[w] = { name, size, slots = { [1..MAX_SLOTS] = key or nil } }.
+-- Slots past size are hidden but kept, so growing the wheel again brings them back.
+---------------------------------------------------------------------------
+-- "Main 3, Mood 1" for the wheel slots holding key; nil if it's on none.
+function ns.WheelSpots(key)
+    local spots = {}
+    for _, wheel in ipairs(EzEmoteDB.wheels) do
+        for i = 1, wheel.size do
+            if wheel.slots[i] == key then spots[#spots + 1] = wheel.name .. " " .. i end
+        end
+    end
+    return #spots > 0 and table.concat(spots, ", ") or nil
+end
+
+function ns.SwapSlots(w, a, b)
+    local slots = EzEmoteDB.wheels[w].slots
+    slots[a], slots[b] = slots[b], slots[a]
+end
+
+function ns.RenameWheel(w, name)
+    EzEmoteDB.wheels[w].name = name
+    ns.UpdateBindingNames()
+end
+
+function ns.ResizeWheel(w, delta)
+    local wheel = EzEmoteDB.wheels[w]
+    wheel.size = math.max(ns.MIN_SLOTS, math.min(ns.MAX_SLOTS, wheel.size + delta))
+end
+
+-- Slot centers of an n-slot wheel, clockwise from the top, on an ellipse ry tall and just wide
+-- enough that no two w x h slots touch. Returns { { x, y }, ... }.
+function ns.WheelLayout(n, w, h, ry)
+    local pos = {}
+    local function Fits(rx)
+        for i = 1, n do
+            local a = math.pi / 2 - (i - 1) * 2 * math.pi / n
+            pos[i] = { math.cos(a) * rx, math.sin(a) * ry }
+        end
+        for i = 1, n do
+            for j = i + 1, n do
+                if math.abs(pos[i][1] - pos[j][1]) < w + 4 and math.abs(pos[i][2] - pos[j][2]) < h + 4 then
+                    return false
+                end
+            end
+        end
+        return true
+    end
+    local rx = ry
+    while not Fits(rx) and rx < 400 do rx = rx + 2 end
+    return pos
 end
 
 ---------------------------------------------------------------------------
@@ -321,6 +387,24 @@ local function InitDB()
             if e then db.favorites[#db.favorites + 1] = "e:" .. e.token end
         end
     end
+    -- Before v1.1 the only wheel showed your first favorites, so wheel 1 starts with them.
+    db.wheels = db.wheels or {}
+    for w, def in ipairs(ns.DEFAULT_WHEELS) do
+        if not db.wheels[w] then
+            local slots = {}
+            for _, cmd in ipairs(def.list or {}) do
+                local e = ns.FindEmote(cmd)
+                if e then slots[#slots + 1] = "e:" .. e.token end
+            end
+            if not def.list then
+                for i, key in ipairs(ns.Existing(db.favorites)) do
+                    if i <= ns.DEFAULT_SLOTS then slots[i] = key end
+                end
+            end
+            db.wheels[w] = { name = def.name, slots = slots }
+        end
+        db.wheels[w].size = db.wheels[w].size or ns.DEFAULT_SLOTS
+    end
 end
 
 -- Saves a custom item; a new one when id is nil.
@@ -338,8 +422,14 @@ function ns.DeleteCustom(id)
     local _, i = ns.Custom(id)
     if not i then return end
     table.remove(EzEmoteDB.custom, i)
-    Remove(EzEmoteDB.favorites, "c:" .. id)
-    Remove(EzEmoteDB.recent, "c:" .. id)
+    local key = "c:" .. id
+    Remove(EzEmoteDB.favorites, key)
+    Remove(EzEmoteDB.recent, key)
+    for _, wheel in ipairs(EzEmoteDB.wheels) do
+        for s = 1, ns.MAX_SLOTS do
+            if wheel.slots[s] == key then wheel.slots[s] = nil end
+        end
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -348,6 +438,7 @@ end
 local HELP = {
     "/eze - open or close the palette",
     "/eze <name> - do an emote or one of your custom items (for macros)",
+    "/eze wheels - set up your four emote wheels",
     "/eze icon - show or hide the launcher icon",
     "/eze stop - stop a running chain",
     "/eze reset - reset the icon and palette positions",
@@ -366,6 +457,7 @@ end
 
 local COMMANDS = {
     [""]  = function() ns.TogglePalette() end,
+    wheels = function() ns.TogglePalette("wheels") end,
     icon  = function()
         EzEmoteDB.hideIcon = not EzEmoteDB.hideIcon
         ns.UpdateIcon()
@@ -402,6 +494,7 @@ ev:RegisterEvent("PLAYER_LOGIN")
 ev:SetScript("OnEvent", function()
     BuildCatalog()
     InitDB()
+    ns.UpdateBindingNames()
     ns.ApplyPositions()
     ns.UpdateIcon()
 end)

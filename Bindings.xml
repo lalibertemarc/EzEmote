@@ -1,4 +1,7 @@
 <Bindings>
 	<Binding name="EZEMOTE_PALETTE" category="EzEmote">EzEmote_TogglePalette()</Binding>
-	<Binding name="EZEMOTE_WHEEL" runOnUp="true" category="EzEmote">EzEmote_Wheel(keystate)</Binding>
+	<Binding name="EZEMOTE_WHEEL" runOnUp="true" category="EzEmote">EzEmote_Wheel(keystate, 1)</Binding>
+	<Binding name="EZEMOTE_WHEEL2" runOnUp="true" category="EzEmote">EzEmote_Wheel(keystate, 2)</Binding>
+	<Binding name="EZEMOTE_WHEEL3" runOnUp="true" category="EzEmote">EzEmote_Wheel(keystate, 3)</Binding>
+	<Binding name="EZEMOTE_WHEEL4" runOnUp="true" category="EzEmote">EzEmote_Wheel(keystate, 4)</Binding>
 </Bindings>

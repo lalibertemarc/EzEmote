@@ -3,8 +3,9 @@ local _, ns = ...
 
 ns.ICON = "Interface\\Icons\\Spell_Shadow_SoothingKiss"
 
--- The wheel shows this many favorites; the palette's Recent tab keeps this many emotes.
-ns.WHEEL_SLOTS = 8
+-- Wheels (each with its own key binding), slots per wheel, and emotes kept in the Recent tab.
+ns.WHEEL_COUNT = 4
+ns.MIN_SLOTS, ns.MAX_SLOTS, ns.DEFAULT_SLOTS = 4, 12, 8
 ns.MAX_RECENT = 15
 
 -- Palette tabs, top to bottom. Lists name emotes by their slash command (aliases work too);
@@ -43,8 +44,16 @@ ns.CATEGORIES = {
     { key = "custom", label = "Custom" },
 }
 
--- Starting favorites (the first eight fill the wheel).
+-- Starting favorites.
 ns.DEFAULT_FAVORITES = { "wave", "bow", "laugh", "cheer", "dance", "salute", "kneel", "thank" }
+
+-- Starting wheels, slots clockwise from the top. A wheel without a list starts with your first favorites.
+ns.DEFAULT_WHEELS = {
+    { name = "Main" },
+    { name = "Mood", list = { "smile", "laugh", "cry", "sigh", "angry", "blush", "shrug", "confused" } },
+    { name = "Poses", list = { "sit", "stand", "kneel", "sleep", "lean", "eat", "drink", "read" } },
+    { name = "Combat", list = { "charge", "helpme", "incoming", "flee", "attackmytarget", "oom", "follow", "healme" } },
+}
 
 -- Starting custom items: one line is a custom /e, several make a chain.
 ns.DEFAULT_CUSTOM = {

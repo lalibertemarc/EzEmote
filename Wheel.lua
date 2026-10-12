@@ -1,12 +1,11 @@
--- EzEmote wheel: hold the key, point toward a favorite, release to emote.
+-- EzEmote wheels: hold a wheel's key, point toward an emote, release to do it.
 local _, ns = ...
 
-local RADIUS = 92
+local RADIUS = 92 -- vertical; the wheel widens for more slots
 local SLOT_W, SLOT_H = 84, 22
 local DEADZONE = 22 -- cursor this close to the center selects nothing
 
 local wheel = CreateFrame("Frame", "EzEmoteWheel", UIParent)
-wheel:SetSize(2 * RADIUS + SLOT_W, 2 * RADIUS + SLOT_H)
 wheel:SetFrameStrata("FULLSCREEN_DIALOG")
 wheel:SetClampedToScreen(true)
 wheel:Hide()
@@ -16,20 +15,23 @@ hub:SetSize(6, 6)
 hub:SetPoint("CENTER")
 hub:SetColorTexture(1, 1, 1, 0.5)
 
+local title = wheel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+title:SetPoint("BOTTOM", hub, "TOP", 0, 8)
+
 local hint = wheel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 hint:SetPoint("TOP", hub, "BOTTOM", 0, -10)
 hint:SetWidth(200)
-hint:SetText("No favorites yet. Right-click emotes in the palette to add them.")
 
-local slots, keys, selected = {}, {}, nil
+local slots, keys, angles = {}, {}, {}
+local open, size, selected -- open wheel, its slot count, selected slot
 
 local function Highlight(i)
+    local r, g, b = unpack(ns.COLORS.fav)
     for j, s in ipairs(slots) do
         local on = j == i
         s:SetBackdropColor(0.05, 0.05, 0.06, on and 0.98 or 0.85)
-        local r, g, b = unpack(ns.COLORS.fav)
         s:SetBackdropBorderColor(r, g, b, on and 0.9 or 0)
-        if on then s.text:SetTextColor(unpack(ns.COLORS.fav)) else s.text:SetTextColor(0.9, 0.9, 0.9) end
+        if on then s.text:SetTextColor(r, g, b) else s.text:SetTextColor(0.9, 0.9, 0.9) end
     end
     selected = i
 end
@@ -37,10 +39,11 @@ end
 local function Release()
     local key = selected and keys[selected]
     wheel:Hide()
+    open = nil
     if key then ns.Fire(key) end
 end
 
-for i = 1, ns.WHEEL_SLOTS do
+for i = 1, ns.MAX_SLOTS do
     local s = CreateFrame("Button", nil, wheel, "BackdropTemplate")
     s:SetSize(SLOT_W, SLOT_H)
     ns.Skin(s)
@@ -53,20 +56,6 @@ for i = 1, ns.WHEEL_SLOTS do
     slots[i] = s
 end
 
--- Spreads n slots clockwise from the top and remembers each slot's angle.
-local angles = {}
-local function Layout(n)
-    for i, s in ipairs(slots) do
-        s:SetShown(i <= n)
-        if i <= n then
-            local a = math.pi / 2 - (i - 1) * 2 * math.pi / n
-            angles[i] = a
-            s:ClearAllPoints()
-            s:SetPoint("CENTER", wheel, "CENTER", math.cos(a) * RADIUS, math.sin(a) * RADIUS)
-        end
-    end
-end
-
 local function AngleGap(a, b)
     local d = math.abs(a - b) % (2 * math.pi)
     return math.min(d, 2 * math.pi - d)
@@ -77,37 +66,55 @@ wheel:SetScript("OnUpdate", function(self)
     local x, y = GetCursorPosition()
     local scale = self:GetEffectiveScale()
     local dx, dy = x / scale - cx, y / scale - cy
-    if #keys == 0 or dx * dx + dy * dy < DEADZONE * DEADZONE then
-        if selected then Highlight(nil) end
-        return
-    end
-    local a, best = math.atan2(dy, dx), 1
-    for i = 2, #keys do
-        if AngleGap(a, angles[i]) < AngleGap(a, angles[best]) then best = i end
+    -- Each slot owns its direction; pointing at an empty one selects nothing.
+    local best
+    if dx * dx + dy * dy >= DEADZONE * DEADZONE then
+        local a = math.atan2(dy, dx)
+        for i = 1, size do
+            if not best or AngleGap(a, angles[i]) < AngleGap(a, angles[best]) then best = i end
+        end
+        if not keys[best] then best = nil end
     end
     if best ~= selected then Highlight(best) end
 end)
 
-local function Open()
-    keys = ns.Existing(EzEmoteDB.favorites)
-    for i = #keys, ns.WHEEL_SLOTS + 1, -1 do keys[i] = nil end
-    Layout(#keys)
-    for i = 1, #keys do slots[i].text:SetText(ns.Label(keys[i])) end
-    hint:SetShown(#keys == 0)
+local function Open(w)
+    local data = EzEmoteDB.wheels[w]
+    size = data.size
+    local pos = ns.WheelLayout(size, SLOT_W, SLOT_H, RADIUS)
+    local width = 0
+    keys = {}
+    for i, s in ipairs(slots) do
+        local key = i <= size and data.slots[i]
+        if key and ns.Item(key) then keys[i] = key end
+        s:SetShown(keys[i] ~= nil)
+        if pos[i] then
+            s:ClearAllPoints()
+            s:SetPoint("CENTER", wheel, "CENTER", pos[i][1], pos[i][2])
+            angles[i] = math.atan2(pos[i][2], pos[i][1])
+            width = math.max(width, math.abs(pos[i][1]))
+        end
+        if keys[i] then s.text:SetText(ns.Label(key)) end
+    end
+    wheel:SetSize(2 * width + SLOT_W, 2 * RADIUS + SLOT_H)
+    title:SetText(data.name)
+    hint:SetText(next(keys) and "" or "This wheel is empty. Set it up with /eze wheels.")
     Highlight(nil)
 
     local x, y = GetCursorPosition()
     local scale = wheel:GetEffectiveScale()
     wheel:ClearAllPoints()
     wheel:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x / scale, y / scale)
+    open = w
     wheel:Show()
 end
 
--- Key binding (Bindings.xml, runOnUp): pressed opens the wheel, released emotes the selected slot.
-function EzEmote_Wheel(keystate)
+-- Key bindings (Bindings.xml, runOnUp): pressed opens wheel w, released does the selected slot.
+function EzEmote_Wheel(keystate, w)
+    w = w or 1
     if keystate == "down" then
-        Open()
-    elseif wheel:IsShown() then
+        Open(w)
+    elseif open == w then
         Release()
     end
 end
