@@ -7,11 +7,14 @@ local RAIL_W, ROW_H = 74, 20
 local MIN_COLS, MIN_ROWS = 3, 10 -- the smallest palette; the rail and the wheel editor need this much
 local MAX_COLS, MAX_ROWS = 8, 30
 local CELL_W = 84 -- narrowest a cell gets; wider palettes stretch the cells
-local GRID_W, BODY_H = MIN_COLS * CELL_W, MIN_ROWS * ROW_H
 local BODY_TOP = -(PAD + SEARCH_H + GAP)
 local GRID_X = PAD + RAIL_W + GAP
-local MIN_W, MIN_H = GRID_X + GRID_W + PAD, PAD + SEARCH_H + GAP + BODY_H + PAD
-local MAX_W, MAX_H = GRID_X + MAX_COLS * CELL_W + PAD, PAD + SEARCH_H + GAP + MAX_ROWS * ROW_H + PAD
+
+-- Palette size that holds a grid of n columns or rows.
+local function PaletteW(n) return GRID_X + n * CELL_W + PAD end
+local function PaletteH(n) return -BODY_TOP + n * ROW_H + PAD end
+local MIN_W, MIN_H = PaletteW(MIN_COLS), PaletteH(MIN_ROWS)
+local MAX_W, MAX_H = PaletteW(MAX_COLS), PaletteH(MAX_ROWS)
 
 local WHITE = "Interface\\Buttons\\WHITE8x8"
 local FLAT = { bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 }
