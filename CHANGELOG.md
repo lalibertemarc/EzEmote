@@ -1,6 +1,6 @@
 # EzEmote
 
-## Unreleased
+## v1.3.0
 
 - **Where you are.** `%l` in a custom line becomes your location: the subzone you stand in ("Goldshire"), or the zone when there is none ("Elwynn Forest"). "raises a glass to everyone in %l."
 
