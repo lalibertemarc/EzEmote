@@ -1,6 +1,6 @@
 # EzEmote
 
-## Unreleased
+## v1.2.0
 
 - **Resizable palette.** Drag its bottom-right corner to make it bigger: the grid gains columns and rows, so more emotes fit without scrolling. The size is remembered; `/eze reset` puts it back.
 
