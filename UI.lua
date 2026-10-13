@@ -586,7 +586,7 @@ hint:SetJustifyH("LEFT")
 hint:SetSpacing(2)
 
 local HINT = "One step per line: an emote (/bow), text for /e (looks around.), or wait 3. "
-    .. "%t is your target's name. Text lines go out as soon as you press; emotes keep their timing."
+    .. "%t is your target's name, %l where you are. Text lines go out as soon as you press; emotes keep their timing."
 
 local GREY, RED, AMBER = { 0.5, 0.5, 0.5 }, { 1, 0.35, 0.35 }, { 1, 0.7, 0.25 }
 

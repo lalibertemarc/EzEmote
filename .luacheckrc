@@ -25,5 +25,6 @@ read_globals = {
     "C_ChatInfo", "C_Timer", "issecretvalue",
     -- Global APIs
     "DoEmote", "SendChatMessage", "UnitExists", "UnitName", "UnitFactionGroup", "GetCursorPosition",
+    "GetSubZoneText", "GetZoneText",
     "GetBindingAction", "GetBindingKey", "GetBindingText", "IsAltKeyDown", "IsControlKeyDown", "IsShiftKeyDown",
 }

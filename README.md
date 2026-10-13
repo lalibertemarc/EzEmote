@@ -38,7 +38,7 @@ wait 3
 ```
 
 - `/emote` lines do that emote; add a name to aim it at someone: `/bow Alice`.
-- Any other line is sent as `/e` text (`/e text` and `/me text` work too). `%t` becomes your target's name.
+- Any other line is sent as `/e` text (`/e text` and `/me text` work too). `%t` becomes your target's name, `%l` your location (subzone, or zone when there is none).
 - Emotes are 2 seconds apart (change it in options); a `wait 3` line sets the gap before the next emote to 3 seconds instead.
 - One line is a plain custom emote; several make a chain. Ctrl-click a custom item to edit it.
 - One press plays the whole chain. The game only lets addons send chat text from a click or key press, never on a delay, so every text line goes out the moment you press; only emotes can be timed. `arrive` above waves and looks around the room right away, then sits 3 seconds later.

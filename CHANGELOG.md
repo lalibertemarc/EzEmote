@@ -1,5 +1,9 @@
 # EzEmote
 
+## Unreleased
+
+- **Where you are.** `%l` in a custom line becomes your location: the subzone you stand in ("Goldshire"), or the zone when there is none ("Elwynn Forest"). "raises a glass to everyone in %l."
+
 ## v1.2.0
 
 - **Resizable palette.** Drag its bottom-right corner to make it bigger: the grid gains columns and rows, so more emotes fit without scrolling. The size is remembered; `/eze reset` puts it back.

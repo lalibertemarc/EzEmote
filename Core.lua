@@ -53,6 +53,14 @@ local function TargetName()
     if name and not issecret(name) then return name end
 end
 
+-- The subzone you stand in ("Goldshire"), or the zone when there is none ("Elwynn Forest").
+local function Location()
+    local sub = GetSubZoneText()
+    if sub and sub ~= "" then return sub end
+    local zone = GetZoneText()
+    return zone ~= "" and zone or "somewhere"
+end
+
 ---------------------------------------------------------------------------
 -- Emote catalog, read from the client's own emote strings
 ---------------------------------------------------------------------------
@@ -276,8 +284,9 @@ local function Perform(step)
     elseif step.token then
         PerformEmote(step.token, step.target)
     else
-        -- %t is your target's name, like in macros.
-        SendEmoteText((step.text:gsub("%%t", function() return TargetName() or "someone" end)))
+        -- %t is your target's name, like in macros; %l is where you stand.
+        local text = step.text:gsub("%%t", function() return TargetName() or "someone" end)
+        SendEmoteText((text:gsub("%%l", Location)))
     end
 end
 
