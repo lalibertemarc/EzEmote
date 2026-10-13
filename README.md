@@ -28,7 +28,7 @@ They start as **Main** (your first eight favorites), **Mood**, **Poses** and **C
 
 ## Custom emotes and chains
 
-In the Custom tab, **+ New** opens the editor. One step per line:
+In the Custom tab, **+ New** opens the editor. One step per line, for example a chain named `arrive`:
 
 ```
 /wave
@@ -39,9 +39,10 @@ wait 3
 
 - `/emote` lines do that emote; add a name to aim it at someone: `/bow Alice`.
 - Any other line is sent as `/e` text (`/e text` and `/me text` work too). `%t` becomes your target's name.
-- `wait 3` pauses 3 seconds; otherwise steps are 2 seconds apart (change it in options).
+- Emotes are 2 seconds apart (change it in options); a `wait 3` line sets the gap before the next emote to 3 seconds instead.
 - One line is a plain custom emote; several make a chain. Ctrl-click a custom item to edit it.
-- One press plays the whole chain. The game only lets addons send chat text from a click or key press, never on a delay, so every text line goes out the moment you press; the emotes after the first keep their timing. `arrive` above waves and looks around the room right away, then sits 2 seconds later. The editor warns you when a text line sits after a `wait` or a timed emote, since it will go out earlier than written.
+- One press plays the whole chain. The game only lets addons send chat text from a click or key press, never on a delay, so every text line goes out the moment you press; only emotes can be timed. `arrive` above waves and looks around the room right away, then sits 3 seconds later.
+- So keep text lines at the top of the chain, before any `wait` or second emote. Text written after them would still go out on the press, earlier than written; the editor warns you in amber when that happens. To pause between two lines of text, make them two custom emotes and press twice.
 
 ## Slash commands
 
