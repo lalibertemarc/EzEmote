@@ -58,7 +58,7 @@ local function Location()
     local sub = GetSubZoneText()
     if sub and sub ~= "" then return sub end
     local zone = GetZoneText()
-    return zone ~= "" and zone or "somewhere"
+    if zone and zone ~= "" then return zone end
 end
 
 ---------------------------------------------------------------------------
@@ -286,7 +286,7 @@ local function Perform(step)
     else
         -- %t is your target's name, like in macros; %l is where you stand.
         local text = step.text:gsub("%%t", function() return TargetName() or "someone" end)
-        SendEmoteText((text:gsub("%%l", Location)))
+        SendEmoteText((text:gsub("%%l", function() return Location() or "somewhere" end)))
     end
 end
 
