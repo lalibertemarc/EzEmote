@@ -1,5 +1,9 @@
 # EzEmote
 
+## Unreleased
+
+- **Resizable palette.** Drag its bottom-right corner to make it bigger: the grid gains columns and rows, so more emotes fit without scrolling. The size is remembered; `/eze reset` puts it back.
+
 ## v1.1.0
 
 - **Four wheels.** Each wheel has its own name and key binding, so one key can hold your greetings and another your fighting words. They start as Main (your first eight favorites, so nothing changes for wheels you already use), Mood, Poses and Combat, and the key bindings list them by name.

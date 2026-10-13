@@ -12,7 +12,7 @@ Open it with its key binding, the launcher icon or `/eze`.
 - **Right-click** adds or removes a favorite (gold name). **Alt-click** in Favorites moves one earlier.
 - **Markers:** green = animation, blue = voice line, purple = chain.
 - The gear (or right-clicking the icon) opens options: show/hide the icon, keep the palette open, type-to-search, chain step delay.
-- Drag the palette or the icon by any empty spot to move them.
+- Drag the palette or the icon by any empty spot to move them. Drag the palette's bottom-right corner to resize it: a bigger palette shows more columns and rows of emotes.
 
 ## Wheels
 
@@ -52,6 +52,6 @@ wait 3
 | `/eze wheels` | Set up your four wheels |
 | `/eze icon` | Show or hide the launcher icon |
 | `/eze stop` | Stop a running chain |
-| `/eze reset` | Reset the icon and palette positions |
+| `/eze reset` | Reset the icon and palette positions and the palette size |
 
 Categories, starting favorites and the sample custom items live in `Data.lua`.

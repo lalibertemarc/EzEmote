@@ -465,9 +465,9 @@ local COMMANDS = {
     end,
     stop  = function() ns.StopChain() end,
     reset = function()
-        EzEmoteDB.iconPos, EzEmoteDB.palettePos = nil, nil
+        EzEmoteDB.iconPos, EzEmoteDB.palettePos, EzEmoteDB.paletteSize = nil, nil, nil
         ns.ApplyPositions()
-        Print("Positions reset.")
+        Print("Positions and palette size reset.")
     end,
     help  = function()
         for _, line in ipairs(HELP) do Print(line) end

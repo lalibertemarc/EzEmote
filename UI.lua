@@ -4,11 +4,14 @@ local _, ns = ...
 local PAD, GAP = 8, 6
 local SEARCH_H = 22
 local RAIL_W, ROW_H = 74, 20
-local COLS, ROWS = 3, 10
-local CELL_W = 84
-local GRID_W, BODY_H = COLS * CELL_W, ROWS * ROW_H
+local MIN_COLS, MIN_ROWS = 3, 10 -- the smallest palette; the rail and the wheel editor need this much
+local MAX_COLS, MAX_ROWS = 8, 30
+local CELL_W = 84 -- narrowest a cell gets; wider palettes stretch the cells
+local GRID_W, BODY_H = MIN_COLS * CELL_W, MIN_ROWS * ROW_H
 local BODY_TOP = -(PAD + SEARCH_H + GAP)
 local GRID_X = PAD + RAIL_W + GAP
+local MIN_W, MIN_H = GRID_X + GRID_W + PAD, PAD + SEARCH_H + GAP + BODY_H + PAD
+local MAX_W, MAX_H = GRID_X + MAX_COLS * CELL_W + PAD, PAD + SEARCH_H + GAP + MAX_ROWS * ROW_H + PAD
 
 local WHITE = "Interface\\Buttons\\WHITE8x8"
 local FLAT = { bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 }
@@ -87,6 +90,11 @@ local function SingleLineBox(parent, placeholder, inset)
     return e
 end
 
+-- Remembers where frame is in EzEmoteDB[field], by its top left corner so a resize grows it down.
+local function SavePos(frame, field)
+    EzEmoteDB[field] = { "TOPLEFT", "BOTTOMLEFT", frame:GetLeft(), frame:GetTop() }
+end
+
 -- Lets frame be dragged (by its empty space) and remembers where it was left in EzEmoteDB[field].
 local function Movable(frame, field)
     frame:SetMovable(true)
@@ -95,8 +103,7 @@ local function Movable(frame, field)
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        local point, _, relPoint, x, y = self:GetPoint()
-        EzEmoteDB[field] = { point, relPoint, x, y }
+        SavePos(self, field)
     end)
 end
 
@@ -115,16 +122,19 @@ end
 -- Frame
 ---------------------------------------------------------------------------
 local palette = CreateFrame("Frame", "EzEmotePalette", UIParent, "BackdropTemplate")
-palette:SetSize(GRID_X + GRID_W + PAD, PAD + SEARCH_H + GAP + BODY_H + PAD)
+palette:SetSize(MIN_W, MIN_H)
 Skin(palette)
 palette:SetFrameStrata("DIALOG")
 palette:EnableMouse(true)
 Movable(palette, "palettePos")
+palette:SetResizable(true)
+palette:SetResizeBounds(MIN_W, MIN_H, MAX_W, MAX_H)
 palette:Hide()
 tinsert(UISpecialFrames, "EzEmotePalette") -- Esc closes it
 
 local mode = "grid" -- "grid" | "options" | "editor" | "wheels"
 local keys, offset = {}, 0 -- keys in the current grid view; first visible row
+local cols, rows = MIN_COLS, MIN_ROWS -- grid size, set by Layout from the palette's size
 local editWheel = 1 -- wheel shown in the wheel editor
 local pickSlot -- slot of that wheel waiting for an emote picked from the grid
 local Refresh, SetMode, OpenEditor -- defined below
@@ -208,7 +218,8 @@ end)
 ---------------------------------------------------------------------------
 local rail = CreateFrame("Frame", nil, palette)
 rail:SetPoint("TOPLEFT", PAD, BODY_TOP)
-rail:SetSize(RAIL_W, BODY_H)
+rail:SetPoint("BOTTOMLEFT", PAD, PAD)
+rail:SetWidth(RAIL_W)
 
 local divider = rail:CreateTexture(nil, "ARTWORK")
 divider:SetColorTexture(1, 1, 1, 0.06)
@@ -235,7 +246,7 @@ end
 ---------------------------------------------------------------------------
 local grid = CreateFrame("Frame", nil, palette)
 grid:SetPoint("TOPLEFT", GRID_X, BODY_TOP)
-grid:SetSize(GRID_W, BODY_H)
+grid:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 grid:EnableMouseWheel(true)
 
 local empty = Text(grid, "GameFontDisableSmall")
@@ -311,10 +322,9 @@ local function OnCellClick(cell, button)
     Refresh()
 end
 
-for i = 1, COLS * ROWS do
+-- Cells are made as the palette grows; Layout sizes and places them.
+local function NewCell(i)
     local c = CreateFrame("Button", nil, grid)
-    c:SetSize(CELL_W - 2, ROW_H - 2)
-    c:SetPoint("TOPLEFT", ((i - 1) % COLS) * CELL_W, -math.floor((i - 1) / COLS) * ROW_H)
     c:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     Hover(c)
     c.text = Text(c)
@@ -327,6 +337,7 @@ for i = 1, COLS * ROWS do
     c:SetScript("OnEnter", ShowCellTooltip)
     c:SetScript("OnLeave", function() GameTooltip:Hide() end)
     cells[i] = c
+    return c
 end
 
 local function EmoteKeys(entries)
@@ -393,7 +404,7 @@ local function ViewKeys()
 end
 
 local function MaxOffset()
-    return math.max(0, math.ceil(#keys / COLS) - ROWS)
+    return math.max(0, math.ceil(#keys / cols) - rows)
 end
 
 local function DrawCell(c, key)
@@ -432,19 +443,19 @@ function Refresh()
     keys, emptyText = ViewKeys()
     firstKey = keys[1] ~= "new" and keys[1] or nil
     offset = math.min(offset, MaxOffset())
-    for i, c in ipairs(cells) do DrawCell(c, keys[offset * COLS + i]) end
+    for i = 1, cols * rows do DrawCell(cells[i], keys[offset * cols + i]) end
     empty:SetText(emptyText or "")
     empty:SetShown(#keys == 0)
 
     local searching = Query() ~= ""
     for key, b in pairs(tabs) do SetSelected(b, key == EzEmoteDB.tab and not searching) end
 
-    local rows = math.ceil(#keys / COLS)
-    thumb:SetShown(rows > ROWS)
-    if rows > ROWS then
-        thumb:SetHeight(BODY_H * ROWS / rows)
+    local total, track = math.ceil(#keys / cols), rows * ROW_H
+    thumb:SetShown(total > rows)
+    if total > rows then
+        thumb:SetHeight(track * rows / total)
         thumb:ClearAllPoints()
-        thumb:SetPoint("TOPRIGHT", grid, "TOPRIGHT", PAD / 2 + 1, -BODY_H * offset / rows)
+        thumb:SetPoint("TOPRIGHT", grid, "TOPRIGHT", PAD / 2 + 1, -track * offset / total)
     end
     for _, c in ipairs(cells) do
         if c:IsMouseOver() and c:IsShown() then ShowCellTooltip(c) end
@@ -469,8 +480,9 @@ local checks = {}
 
 local function Check(label, get, set)
     local b = CreateFrame("Button", nil, options)
-    b:SetSize(GRID_W, 20)
+    b:SetHeight(20)
     b:SetPoint("TOPLEFT", 0, -#checks * 22)
+    b:SetPoint("RIGHT")
     b.box = CreateFrame("Frame", nil, b, "BackdropTemplate")
     b.box:SetSize(12, 12)
     b.box:SetPoint("LEFT")
@@ -516,7 +528,7 @@ Stepper(options, "+", delayLabel, 34, function() ChangeDelay(0.5) end)
 
 local notes = Text(options, "GameFontDisableSmall")
 notes:SetPoint("TOPLEFT", delayLabel, "BOTTOMLEFT", 0, -16)
-notes:SetWidth(GRID_W + RAIL_W - 8)
+notes:SetPoint("RIGHT", -10, 0)
 notes:SetJustifyH("LEFT")
 notes:SetSpacing(3)
 notes:SetText("Key bindings: Options > Keybindings > EzEmote. Each of your four wheels has its own.\n"
@@ -541,6 +553,7 @@ editor:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 editor:Hide()
 
 local editingId -- id of the custom item being edited, nil for a new one
+local EDITOR_FOOT = 68 -- room under the steps box for the hint and the buttons
 
 local nameBox = SingleLineBox(editor, "Name, e.g. arrive")
 nameBox:SetPoint("TOPLEFT", 0, 0)
@@ -549,15 +562,13 @@ nameBox:SetMaxLetters(40)
 
 local stepsFrame = CreateFrame("Frame", nil, editor, "BackdropTemplate")
 stepsFrame:SetPoint("TOPLEFT", nameBox, "BOTTOMLEFT", 0, -GAP)
-stepsFrame:SetPoint("TOPRIGHT", nameBox, "BOTTOMRIGHT", 0, -GAP)
-stepsFrame:SetHeight(104)
+stepsFrame:SetPoint("BOTTOMRIGHT", 0, EDITOR_FOOT)
 stepsFrame:SetClipsChildren(true)
 Skin(stepsFrame, 0.5)
 
 local stepsBox = CreateFrame("EditBox", nil, stepsFrame)
 stepsBox:SetPoint("TOPLEFT", 6, -5)
-stepsBox:SetPoint("TOPRIGHT", -6, -5)
-stepsBox:SetHeight(94)
+stepsBox:SetPoint("BOTTOMRIGHT", -6, 5)
 stepsBox:SetMultiLine(true)
 stepsBox:SetAutoFocus(false)
 stepsBox:SetFontObject("GameFontHighlightSmall")
@@ -657,7 +668,6 @@ end
 ---------------------------------------------------------------------------
 -- Wheel editor: wheel tabs on top, then name, size and key, and the chosen wheel drawn below
 ---------------------------------------------------------------------------
-local EDIT_W = GRID_X + GRID_W - PAD
 local TOOLS_Y = -(ROW_H + GAP)
 local MINI_TOP = TOOLS_Y - SEARCH_H - GAP
 local MINI_W, MINI_H, MINI_RY = 60, 18, 62 -- sized so 4 to 12 slots fit the editor
@@ -688,8 +698,7 @@ end)
 
 local wheelTabs = {}
 for w = 1, ns.WHEEL_COUNT do
-    local b = ListButton(wheels, EDIT_W / ns.WHEEL_COUNT)
-    b:SetPoint("TOPLEFT", (w - 1) * EDIT_W / ns.WHEEL_COUNT, 0)
+    local b = ListButton(wheels, 0) -- Layout sets its width and spot
     b:SetScript("OnClick", function()
         wheelName:ClearFocus() -- saves a name being typed to the wheel it belongs to
         editWheel = w
@@ -845,8 +854,61 @@ function SetMode(m)
     Refresh()
 end
 
+-- Fits the palette's insides to its size: the grid gets as many columns of at least CELL_W as fit,
+-- stretched to fill, and as many rows as fit; the wheel tabs share the width.
+local function Layout()
+    local w, h = palette:GetSize()
+    local gridW = w - GRID_X - PAD
+    cols = math.max(MIN_COLS, math.floor(gridW / CELL_W))
+    rows = math.max(MIN_ROWS, math.floor((h + BODY_TOP - PAD) / ROW_H))
+    local cellW = gridW / cols
+    for i = 1, cols * rows do
+        local c = cells[i] or NewCell(i)
+        c:SetSize(cellW - 2, ROW_H - 2)
+        c:ClearAllPoints()
+        c:SetPoint("TOPLEFT", ((i - 1) % cols) * cellW, -math.floor((i - 1) / cols) * ROW_H)
+    end
+    for i = cols * rows + 1, #cells do
+        cells[i].key = nil
+        cells[i]:Hide()
+    end
+    local tabW = (w - 2 * PAD) / ns.WHEEL_COUNT
+    for i, b in ipairs(wheelTabs) do
+        b:SetWidth(tabW)
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", (i - 1) * tabW, 0)
+    end
+    Refresh()
+end
+palette:SetScript("OnSizeChanged", Layout)
+
+-- Corner grip: drag to resize the palette.
+local grip = CreateFrame("Button", nil, palette)
+grip:SetSize(12, 12)
+grip:SetPoint("BOTTOMRIGHT", -1, 1)
+grip:SetFrameLevel(palette:GetFrameLevel() + 10) -- above the Back and Save buttons it touches
+grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+grip:SetScript("OnMouseDown", function()
+    GameTooltip:Hide()
+    palette:StartSizing("BOTTOMRIGHT")
+end)
+grip:SetScript("OnMouseUp", function()
+    palette:StopMovingOrSizing()
+    SavePos(palette, "palettePos")
+    EzEmoteDB.paletteSize = { palette:GetSize() }
+end)
+grip:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Drag: resize", 0.8, 0.8, 0.8)
+    GameTooltip:Show()
+end)
+grip:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
 palette:SetScript("OnShow", function()
     offset = 0
+    Layout()
     SetMode("grid")
     -- Next frame, so the key that opened the palette isn't typed into the search box.
     if EzEmoteDB.focusSearch then
@@ -856,6 +918,7 @@ palette:SetScript("OnShow", function()
     end
 end)
 palette:SetScript("OnHide", function()
+    palette:StopMovingOrSizing()
     pickSlot = nil
     search:SetText("")
     search:ClearFocus()
@@ -918,8 +981,10 @@ function ns.UpdateIcon()
     icon:SetShown(not EzEmoteDB.hideIcon)
 end
 
--- Saved positions, or next to the main chat window.
+-- Saved positions and palette size, or the smallest palette next to the main chat window.
 function ns.ApplyPositions()
     Place(icon, "iconPos", "BOTTOMRIGHT", ChatFrame1, "TOPRIGHT", 0, 28)
     Place(palette, "palettePos", "BOTTOMLEFT", ChatFrame1, "TOPLEFT", 0, 40)
+    local size = EzEmoteDB.paletteSize
+    palette:SetSize(size and size[1] or MIN_W, size and size[2] or MIN_H)
 end
