@@ -1,9 +1,5 @@
 # EzEmote
 
-## v1.3.1
-
-- **Emote in dungeons too.** EzEmote no longer refuses emotes or stops chains when it thinks the game locks addon chat (in dungeons, during boss fights). Emotes and lines always go out; if the game ever really blocks one, BugSack will say so.
-
 ## v1.3.0
 
 - **Where you are.** `%l` in a custom line becomes your location: the subzone you stand in ("Goldshire"), or the zone when there is none ("Elwynn Forest"). "raises a glass to everyone in %l."

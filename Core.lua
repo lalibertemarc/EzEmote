@@ -43,6 +43,12 @@ local function SendEmoteText(text)
     end
 end
 
+-- Encounters and similar lock addon chat and emotes (C_ChatInfo.InChatMessagingLockdown). A real game
+-- block, confirmed in-game: SendChatMessage then raises ADDON_ACTION_BLOCKED. Keep this check.
+local function ChatLocked()
+    return C_ChatInfo and C_ChatInfo.InChatMessagingLockdown and C_ChatInfo.InChatMessagingLockdown()
+end
+
 local function TargetName()
     local name = UnitExists("target") and UnitName("target")
     if name and not issecret(name) then return name end
@@ -314,6 +320,10 @@ end
 
 function RunStep(i)
     chain.timer = nil
+    if ChatLocked() then
+        Print("The game blocks emotes right now. Chain stopped.")
+        return ns.StopChain()
+    end
     Perform(chain.steps[i])
     local j, wait = NextAction(chain.steps, i + 1)
     Schedule(j, wait or EzEmoteDB.stepDelay)
@@ -346,6 +356,7 @@ end
 -- Firing
 ---------------------------------------------------------------------------
 function ns.Fire(key)
+    if ChatLocked() then return Print("The game blocks emotes right now.") end
     local kind, item = ns.Item(key)
     if kind == "e" then
         -- With no target name the game aims the emote at your target, as /wave does.
