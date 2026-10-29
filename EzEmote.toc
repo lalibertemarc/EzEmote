@@ -1,4 +1,4 @@
-## Interface: 16001
+## Interface: 16001, 11509
 ## Title: EzEmote
 ## Notes: Every emote, your own /e lines and emote chains in a compact palette and a hold-key wheel. No more emote macros on your bars.
 ## Author: Marc

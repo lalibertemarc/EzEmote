@@ -1,5 +1,9 @@
 # EzEmote
 
+## Unreleased
+
+- **Classic Era.** EzEmote now loads in Classic Era too (1.15.9). The palette and wheels list that client's own emotes, so you see exactly the ones it has.
+
 ## v1.3.0
 
 - **Where you are.** `%l` in a custom line becomes your location: the subzone you stand in ("Goldshire"), or the zone when there is none ("Elwynn Forest"). "raises a glass to everyone in %l."

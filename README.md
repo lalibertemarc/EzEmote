@@ -1,6 +1,6 @@
 # EzEmote
 
-Every emote, your own `/e` lines and emote chains, without a single emote macro on your action bars. Built for roleplayers on WoW Forever.
+Every emote, your own `/e` lines and emote chains, without a single emote macro on your action bars. Built for roleplayers on WoW Forever and Classic Era.
 
 ## Palette
 
