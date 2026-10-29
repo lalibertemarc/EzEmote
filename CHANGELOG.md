@@ -1,6 +1,6 @@
 # EzEmote
 
-## Unreleased
+## v1.4.0
 
 - **Classic Era.** EzEmote now loads in Classic Era too (1.15.9). The palette and wheels list that client's own emotes, so you see exactly the ones it has.
 
