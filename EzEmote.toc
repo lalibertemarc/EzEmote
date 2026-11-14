@@ -3,6 +3,17 @@
 ## Notes: Every emote, your own /e lines and emote chains in a compact palette and a hold-key wheel. No more emote macros on your bars.
 ## Author: Marc
 ## Version: @project-version@
+## Category: Roleplay
+## Category-deDE: Rollenspiel
+## Category-esES: Juego de rol
+## Category-esMX: Juego de rol
+## Category-frFR: Jeu de rôle
+## Category-itIT: Gioco di Ruolo
+## Category-koKR: 롤플레잉
+## Category-ptBR: Interpretação de Papel
+## Category-ruRU: Ролевая игра
+## Category-zhCN: 角色扮演
+## Category-zhTW: 角色扮演
 ## IconTexture: Interface\Icons\Spell_Shadow_SoothingKiss
 ## SavedVariables: EzEmoteDB
 ## X-Curse-Project-ID: 1741155
