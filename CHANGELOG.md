@@ -1,5 +1,9 @@
 # EzEmote
 
+## v1.4.1
+
+- Listed under **Roleplay** in the game's AddOns list, next to other roleplay addons.
+
 ## v1.4.0
 
 - **Classic Era.** EzEmote now loads in Classic Era too (1.15.9). The palette and wheels list that client's own emotes, so you see exactly the ones it has.
